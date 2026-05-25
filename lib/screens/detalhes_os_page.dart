@@ -106,6 +106,13 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
     _recusarOrcamento(_propServicoController.text.trim());
   }
 
+  void _handleSalvarProposta() {
+    if (_propFormKey.currentState!.validate()) {
+      final valor = double.tryParse(_propValorController.text.replaceAll(',', '.')) ?? 0.0;
+      _salvarPropostaOrcamento(_propServicoController.text.trim(), valor);
+    }
+  }
+
   // Salva o serviço executado e valor final e disponibiliza para retirada
   Future<void> _finalizarServico() async {
     if (_item == null) return;
@@ -128,6 +135,24 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
         if (!mounted) return;
         _mostrarSnackBar('Erro ao finalizar serviço: $e');
       }
+    }
+  }
+
+  // Apenas salva a avaliação técnica e proposta de orçamento sem alterar o status
+  Future<void> _salvarPropostaOrcamento(String diagnostico, double valor) async {
+    if (_item == null) return;
+    try {
+      await (_db.update(_db.ordensServico)..where((t) => t.id.equals(_item!.ordem.id)))
+          .write(OrdensServicoCompanion(
+            servicoExecutado: drift.Value(diagnostico),
+            valor: drift.Value(valor),
+          ));
+      if (!mounted) return;
+      _mostrarSnackBar('Avaliação e proposta de orçamento registradas com sucesso!');
+      _recarregarDados();
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarSnackBar('Erro ao registrar proposta: $e');
     }
   }
 
@@ -897,6 +922,9 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
     }
 
     if (status == 'Pendente') {
+      final temPropostaSalva = _item!.ordem.servicoExecutado != null && 
+                              _item!.ordem.servicoExecutado!.isNotEmpty;
+
       return Card(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -922,6 +950,49 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
+
+                // Mensagem de Confirmação de Proposta Registrada
+                if (temPropostaSalva) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0), // Laranja leve premium
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFB74D), width: 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Color(0xFFE67E22), size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              'Proposta Registrada com Sucesso!',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFE67E22),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Diagnóstico/Serviço: ${_item!.ordem.servicoExecutado}',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF5D4037)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Valor Proposto: R\$ ${_item!.ordem.valor != null ? _item!.ordem.valor!.toStringAsFixed(2) : '0,00'}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF5D4037)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 
                 // Diagnóstico / Serviço Proposto
                 TextFormField(
@@ -953,12 +1024,32 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                 ),
                 const SizedBox(height: 20),
 
+                // Botão de Registrar/Salvar Proposta
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: _handleSalvarProposta,
+                    icon: const Icon(Icons.save, size: 20),
+                    label: const Text(
+                      'Registrar / Salvar Proposta',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE67E22), // Laranja
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _handleRecusar,
-                        icon: const Icon(Icons.cancel_outlined, size: 20),
+                        icon: const Icon(Icons.cancel_outlined, size: 18),
                         label: const Text(
                           'Recusar',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -966,7 +1057,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.redAccent,
                           side: const BorderSide(color: Colors.redAccent),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
@@ -975,7 +1066,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _handleAprovar,
-                        icon: const Icon(Icons.play_circle_outline, size: 20),
+                        icon: const Icon(Icons.play_circle_outline, size: 18),
                         label: const Text(
                           'Aprovar e Iniciar',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -983,7 +1074,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF27AE60),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
