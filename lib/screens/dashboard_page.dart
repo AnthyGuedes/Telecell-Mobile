@@ -102,13 +102,6 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         elevation: 0,
         backgroundColor: const Color(0xFF1565C0),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _carregarDados,
-            tooltip: 'Atualizar dados',
-          ),
-        ],
       ),
       body: _carregando 
           ? const Center(child: CircularProgressIndicator())
