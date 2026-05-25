@@ -150,10 +150,6 @@ class _DashboardPageState extends State<DashboardPage> {
                                   const SizedBox(height: 12),
                                   _buildQuickActionsGrid(),
                                   
-                                  const SizedBox(height: 30),
-                                  
-                                  // Seção de Destaque / Banner Informativo
-                                  _buildWelcomeBanner(),
                                 ],
                               ),
                       ),
@@ -192,15 +188,7 @@ class _DashboardPageState extends State<DashboardPage> {
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Gerencie ordens de serviço e orçamentos com facilidade.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.blue[100],
-            ),
-          ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           // Barra de pesquisa com design premium
           Container(
             decoration: BoxDecoration(
@@ -490,53 +478,6 @@ class _DashboardPageState extends State<DashboardPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomeBanner() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white,
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-        gradient: LinearGradient(
-          colors: [Colors.blue[50]!, Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline, color: Color(0xFF1565C0), size: 36),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Dica de Produtividade',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1565C0),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Utilize a pesquisa rápida para localizar clientes e aparelhos instantaneamente sem navegar.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          )
-        ],
       ),
     );
   }
