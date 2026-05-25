@@ -72,6 +72,9 @@ class _DashboardPageState extends State<DashboardPage> {
         
         return nomeMatch || cpfMatch || cpfOsMatch || modeloMatch || idMatch;
       }).toList();
+
+      // Ordenação alfabética pelo nome do cliente (A-Z)
+      _ordensFiltradas.sort((a, b) => a.cliente.nome.toLowerCase().compareTo(b.cliente.nome.toLowerCase()));
     });
   }
 
@@ -266,24 +269,52 @@ class _DashboardPageState extends State<DashboardPage> {
           total.toString(),
           Icons.assessment,
           const [Color(0xFF2C3E50), Color(0xFF34495E)],
+          onTap: () async {
+            await Navigator.pushNamed(context, '/lista-ordens', arguments: {
+              'tabIndex': 0,
+              'statusFilter': 'Todos',
+            });
+            _carregarDados();
+          },
         ),
         _buildMetricCard(
           'Pendentes',
           pendente.toString(),
           Icons.pending_actions,
           const [Color(0xFFE67E22), Color(0xFFD35400)],
+          onTap: () async {
+            await Navigator.pushNamed(context, '/lista-ordens', arguments: {
+              'tabIndex': 0,
+              'statusFilter': 'Pendente',
+            });
+            _carregarDados();
+          },
         ),
         _buildMetricCard(
           'Em Manutenção',
           emManutencao.toString(),
           Icons.build,
           const [Color(0xFF2980B9), Color(0xFF1F3A60)],
+          onTap: () async {
+            await Navigator.pushNamed(context, '/lista-ordens', arguments: {
+              'tabIndex': 0,
+              'statusFilter': 'Em Manutenção',
+            });
+            _carregarDados();
+          },
         ),
         _buildMetricCard(
           'Aguardando Conf.',
           aguardandoConf.toString(),
           Icons.lock_clock,
           const [Color(0xFF8E44AD), Color(0xFF9B59B6)],
+          onTap: () async {
+            await Navigator.pushNamed(context, '/lista-ordens', arguments: {
+              'tabIndex': 0,
+              'statusFilter': 'Aguardo de confirmação',
+            });
+            _carregarDados();
+          },
         ),
         _buildMetricCard(
           'Concluídos',
@@ -291,65 +322,79 @@ class _DashboardPageState extends State<DashboardPage> {
           Icons.check_circle,
           const [Color(0xFF27AE60), Color(0xFF2ECC71)],
           isFullWidth: true,
+          onTap: () async {
+            await Navigator.pushNamed(context, '/lista-ordens', arguments: {
+              'tabIndex': 0,
+              'statusFilter': 'Concluído',
+            });
+            _carregarDados();
+          },
         ),
       ],
     );
   }
 
-  Widget _buildMetricCard(String title, String count, IconData icon, List<Color> colors, {bool isFullWidth = false}) {
-    return Container(
-      decoration: BoxDecoration(
+  Widget _buildMetricCard(String title, String count, IconData icon, List<Color> colors, {bool isFullWidth = false, VoidCallback? onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.first.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  count,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: colors,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: colors.first.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          Icon(
-            icon,
-            color: Colors.white30,
-            size: 38,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      count,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                icon,
+                color: Colors.white30,
+                size: 38,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

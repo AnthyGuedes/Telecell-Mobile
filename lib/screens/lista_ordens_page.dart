@@ -43,6 +43,12 @@ class _ListaOrdensPageState extends State<ListaOrdensPage> with SingleTickerProv
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is int) {
       _tabController.index = args;
+    } else if (args is Map<String, dynamic>) {
+      _tabController.index = args['tabIndex'] ?? 0;
+      if (args['statusFilter'] != null) {
+        _filtroStatus = args['statusFilter'];
+        _aplicarFiltrosOrdens();
+      }
     }
   }
 
@@ -127,6 +133,9 @@ class _ListaOrdensPageState extends State<ListaOrdensPage> with SingleTickerProv
 
         return matchBusca && matchStatus && matchTipo;
       }).toList();
+
+      // Ordenação alfabética pelo nome do cliente (A-Z)
+      _ordensExibidas.sort((a, b) => a.cliente.nome.toLowerCase().compareTo(b.cliente.nome.toLowerCase()));
     });
   }
 
