@@ -1062,8 +1062,7 @@ class _PatternLockDialogState extends State<PatternLockDialog> {
   }
 
   void _onPanUpdate(DragUpdateDetails details, Size size) {
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    final Offset localPos = box.globalToLocal(details.globalPosition);
+    final Offset localPos = details.localPosition;
     setState(() {
       _currentTouchPosition = localPos;
     });
@@ -1115,10 +1114,7 @@ class _PatternLockDialogState extends State<PatternLockDialog> {
               border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
             ),
             child: GestureDetector(
-              onPanUpdate: (d) {
-                final RenderBox box = context.findRenderObject() as RenderBox;
-                _onPanUpdate(d, box.size);
-              },
+              onPanUpdate: (d) => _onPanUpdate(d, const Size(240, 240)),
               onPanEnd: _onPanEnd,
               child: CustomPaint(
                 painter: _PatternCapturePainter(
