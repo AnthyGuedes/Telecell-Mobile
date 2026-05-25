@@ -84,7 +84,7 @@ class _DashboardPageState extends State<DashboardPage> {
     int total = _todasAsOrdens.length;
     int pendente = _todasAsOrdens.where((o) => o.ordem.status == 'Pendente' || o.ordem.status == 'Aberta').length;
     int emManutencao = _todasAsOrdens.where((o) => o.ordem.status == 'Em Manutenção').length;
-    int aguardandoConf = _todasAsOrdens.where((o) => o.ordem.status == 'Aguardo de confirmação' || o.ordem.status == 'Aguardando Confirmação').length;
+    int aguardandoRetirada = _todasAsOrdens.where((o) => o.ordem.status == 'Aguardando Retirada').length;
     int concluido = _todasAsOrdens.where((o) => o.ordem.status == 'Concluído' || o.ordem.status == 'Concluída').length;
 
     return Scaffold(
@@ -141,7 +141,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  _buildMetricsGrid(total, pendente, emManutencao, aguardandoConf, concluido),
+                                  _buildMetricsGrid(total, pendente, emManutencao, aguardandoRetirada, concluido),
                                   
                                   const SizedBox(height: 24),
                                   
@@ -255,7 +255,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildMetricsGrid(int total, int pendente, int emManutencao, int aguardandoConf, int concluido) {
+  Widget _buildMetricsGrid(int total, int pendente, int emManutencao, int aguardandoRetirada, int concluido) {
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 12,
@@ -304,14 +304,14 @@ class _DashboardPageState extends State<DashboardPage> {
           },
         ),
         _buildMetricCard(
-          'Aguardando Conf.',
-          aguardandoConf.toString(),
-          Icons.lock_clock,
+          'Aguardando Retirada',
+          aguardandoRetirada.toString(),
+          Icons.hail,
           const [Color(0xFF8E44AD), Color(0xFF9B59B6)],
           onTap: () async {
             await Navigator.pushNamed(context, '/lista-ordens', arguments: {
               'tabIndex': 0,
-              'statusFilter': 'Aguardo de confirmação',
+              'statusFilter': 'Aguardando Retirada',
             });
             _carregarDados();
           },
@@ -622,9 +622,8 @@ class _DashboardPageState extends State<DashboardPage> {
       case 'em manutencao':
         statusColor = const Color(0xFF2980B9);
         break;
-      case 'aguardo de confirmação':
-      case 'aguardo de confirmacao':
-      case 'aguardando confirmação':
+      case 'aguardando retirada':
+      case 'aguardo de retirada':
         statusColor = const Color(0xFF8E44AD);
         break;
       case 'concluído':

@@ -186,7 +186,7 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
         checkDisplay: drift.Value(_displayOk),
         checkTouch: drift.Value(_touchOk),
         problemaRelatado: drift.Value(problemaCompleto),
-        status: drift.Value('Pendente'), // Inicial como Pendente
+        status: drift.Value(_tipoRegistro == 'OS' ? 'Em Manutenção' : 'Pendente'),
       );
 
       try {

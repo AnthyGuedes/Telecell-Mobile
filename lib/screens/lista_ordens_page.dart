@@ -516,7 +516,8 @@ class _ListaOrdensPageState extends State<ListaOrdensPage> with SingleTickerProv
                               case 'em manutenção':
                                 statusColor = const Color(0xFF2980B9);
                                 break;
-                              case 'aguardo de confirmação':
+                               case 'aguardando retirada':
+                              case 'aguardo de retirada':
                                 statusColor = const Color(0xFF8E44AD);
                                 break;
                               case 'concluído':
@@ -717,7 +718,7 @@ class _ListaOrdensPageState extends State<ListaOrdensPage> with SingleTickerProv
   }
 
   Widget _buildFiltrosBar() {
-    final statusList = ['Todos', 'Pendente', 'Em Manutenção', 'Aguardo de confirmação', 'Concluído'];
+    final statusList = ['Todos', 'Pendente', 'Em Manutenção', 'Aguardando Retirada', 'Concluído'];
     final tiposList = ['Todos', 'OS', 'Orçamento'];
 
     return Container(
@@ -818,9 +819,8 @@ class _ListaOrdensPageState extends State<ListaOrdensPage> with SingleTickerProv
       case 'em manutencao':
         statusColor = const Color(0xFF2980B9);
         break;
-      case 'aguardo de confirmação':
-      case 'aguardo de confirmacao':
-      case 'aguardando confirmação':
+      case 'aguardando retirada':
+      case 'aguardo de retirada':
         statusColor = const Color(0xFF8E44AD);
         break;
       case 'concluído':

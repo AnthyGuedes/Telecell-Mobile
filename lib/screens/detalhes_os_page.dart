@@ -20,6 +20,11 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
   final _valorController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  // Controladores para Proposta de Orçamento
+  final _propServicoController = TextEditingController();
+  final _propValorController = TextEditingController();
+  final _propFormKey = GlobalKey<FormState>();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -29,6 +34,8 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
         _item = args;
         _servicoController.text = args.ordem.servicoExecutado ?? '';
         _valorController.text = args.ordem.valor != null ? args.ordem.valor!.toStringAsFixed(2) : '';
+        _propServicoController.text = args.ordem.servicoExecutado ?? '';
+        _propValorController.text = args.ordem.valor != null ? args.ordem.valor!.toStringAsFixed(2) : '';
       }
     }
   }
@@ -37,6 +44,8 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
   void dispose() {
     _servicoController.dispose();
     _valorController.dispose();
+    _propServicoController.dispose();
+    _propValorController.dispose();
     super.dispose();
   }
 
@@ -53,6 +62,8 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
         _item = atualizado;
         _servicoController.text = atualizado.ordem.servicoExecutado ?? '';
         _valorController.text = atualizado.ordem.valor != null ? atualizado.ordem.valor!.toStringAsFixed(2) : '';
+        _propServicoController.text = atualizado.ordem.servicoExecutado ?? '';
+        _propValorController.text = atualizado.ordem.valor != null ? atualizado.ordem.valor!.toStringAsFixed(2) : '';
         _carregando = false;
       });
     } catch (e) {
@@ -80,7 +91,22 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
     }
   }
 
-  // Salva o serviço executado e valor final e conclui a OS
+  void _handleAprovar() {
+    if (_propFormKey.currentState!.validate()) {
+      final valor = double.tryParse(_propValorController.text.replaceAll(',', '.')) ?? 0.0;
+      _aprovarOrcamento(_propServicoController.text.trim(), valor);
+    }
+  }
+
+  void _handleRecusar() {
+    if (_propServicoController.text.trim().isEmpty) {
+      _mostrarSnackBar('Por favor, informe o diagnóstico no campo de serviço para recusar.');
+      return;
+    }
+    _recusarOrcamento(_propServicoController.text.trim());
+  }
+
+  // Salva o serviço executado e valor final e disponibiliza para retirada
   Future<void> _finalizarServico() async {
     if (_item == null) return;
     
@@ -90,18 +116,73 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
       try {
         await (_db.update(_db.ordensServico)..where((t) => t.id.equals(_item!.ordem.id)))
             .write(OrdensServicoCompanion(
-              status: const drift.Value('Concluído'),
+              status: const drift.Value('Aguardando Retirada'),
               servicoExecutado: drift.Value(_servicoController.text.trim()),
               valor: drift.Value(valorDigitado),
             ));
         
         if (!mounted) return;
-        _mostrarSnackBar('Serviço finalizado com sucesso!');
+        _mostrarSnackBar('Serviço concluído! Disponibilizado para retirada.');
         _recarregarDados();
       } catch (e) {
         if (!mounted) return;
         _mostrarSnackBar('Erro ao finalizar serviço: $e');
       }
+    }
+  }
+
+  // Aprova o orçamento e inicia manutenção
+  Future<void> _aprovarOrcamento(String diagnostico, double valor) async {
+    if (_item == null) return;
+    try {
+      await (_db.update(_db.ordensServico)..where((t) => t.id.equals(_item!.ordem.id)))
+          .write(OrdensServicoCompanion(
+            status: const drift.Value('Em Manutenção'),
+            servicoExecutado: drift.Value('Orçamento Aprovado: $diagnostico'),
+            valor: drift.Value(valor),
+          ));
+      if (!mounted) return;
+      _mostrarSnackBar('Orçamento aprovado! Aparelho em Manutenção.');
+      _recarregarDados();
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarSnackBar('Erro ao aprovar orçamento: $e');
+    }
+  }
+
+  // Recusa o orçamento e disponibiliza para retirada
+  Future<void> _recusarOrcamento(String diagnostico) async {
+    if (_item == null) return;
+    try {
+      await (_db.update(_db.ordensServico)..where((t) => t.id.equals(_item!.ordem.id)))
+          .write(OrdensServicoCompanion(
+            status: const drift.Value('Aguardando Retirada'),
+            servicoExecutado: drift.Value('Orçamento Recusado: $diagnostico'),
+            valor: const drift.Value(0.0),
+          ));
+      if (!mounted) return;
+      _mostrarSnackBar('Orçamento recusado! Aparelho disponível para retirada.');
+      _recarregarDados();
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarSnackBar('Erro ao recusar orçamento: $e');
+    }
+  }
+
+  // Confirma entrega física do aparelho e conclui a OS
+  Future<void> _confirmarEntrega() async {
+    if (_item == null) return;
+    try {
+      await (_db.update(_db.ordensServico)..where((t) => t.id.equals(_item!.ordem.id)))
+          .write(OrdensServicoCompanion(
+            status: const drift.Value('Concluído'),
+          ));
+      if (!mounted) return;
+      _mostrarSnackBar('Aparelho entregue! Serviço concluído.');
+      _recarregarDados();
+    } catch (e) {
+      if (!mounted) return;
+      _mostrarSnackBar('Erro ao registrar entrega: $e');
     }
   }
 
@@ -263,9 +344,8 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
       case 'em manutencao':
         statusColor = const Color(0xFF2980B9);
         break;
-      case 'aguardo de confirmação':
-      case 'aguardo de confirmacao':
-      case 'aguardando confirmação':
+      case 'aguardando retirada':
+      case 'aguardo de retirada':
         statusColor = const Color(0xFF8E44AD);
         break;
       case 'concluído':
@@ -323,7 +403,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
   }
 
   Widget _buildStepperVisual() {
-    final statusList = ['Pendente', 'Em Manutenção', 'Aguardo de confirmação', 'Concluído'];
+    final statusList = ['Pendente', 'Em Manutenção', 'Aguardando Retirada', 'Concluído'];
     final currentStatus = _item!.ordem.status;
     int currentIndex = statusList.indexOf(currentStatus);
     
@@ -638,7 +718,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
   }
 
   Widget _buildStatusActionsCard(Color statusColor) {
-    final statusList = ['Pendente', 'Em Manutenção', 'Aguardo de confirmação'];
+    final statusList = ['Pendente', 'Em Manutenção', 'Aguardando Retirada'];
     final current = _item!.ordem.status == 'Aberta' ? 'Pendente' : _item!.ordem.status;
 
     return Card(
@@ -675,7 +755,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                     case 'Em Manutenção':
                       activeColor = const Color(0xFF2980B9);
                       break;
-                    case 'Aguardo de confirmação':
+                    case 'Aguardando Retirada':
                       activeColor = const Color(0xFF8E44AD);
                       break;
                     default:
@@ -715,9 +795,8 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
 
   Widget _buildFinalizationCard() {
     final status = _item!.ordem.status;
-    final isFinalized = status == 'Concluído';
 
-    if (isFinalized) {
+    if (status == 'Concluído') {
       return Card(
         color: const Color(0xFFE8F5E9), // Fundo verde leve
         shape: RoundedRectangleBorder(
@@ -758,6 +837,167 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
       );
     }
 
+    if (status == 'Aguardando Retirada') {
+      return Card(
+        color: const Color(0xFFF3E5F5), // Fundo roxo leve premium
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFB39DDB), width: 1),
+        ),
+        elevation: 1,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.mark_as_unread, color: Color(0xFF7B1FA2)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Aparelho Aguardando Retirada',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF7B1FA2)),
+                  ),
+                ],
+              ),
+              const Divider(height: 20, color: Color(0xFFB39DDB)),
+              _buildDetailRow(
+                'Serviço/Diagnóstico:',
+                _item!.ordem.servicoExecutado ?? 'Não detalhado',
+                isHighlight: true,
+              ),
+              const SizedBox(height: 8),
+              _buildDetailRow(
+                'Valor a ser Pago:',
+                'R\$ ${_item!.ordem.valor != null ? _item!.ordem.valor!.toStringAsFixed(2) : '0,00'}',
+                isHighlight: true,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _confirmarEntrega,
+                  icon: const Icon(Icons.delivery_dining, size: 22),
+                  label: const Text(
+                    'Confirmar Entrega e Pagamento',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8E44AD),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (status == 'Pendente') {
+      return Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFFFCC80), width: 1), // Borda laranja leve
+        ),
+        elevation: 1,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _propFormKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.analytics_outlined, color: Color(0xFFE67E22)),
+                    SizedBox(width: 8),
+                    Text(
+                      'Avaliação e Proposta de Orçamento',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Diagnóstico / Serviço Proposto
+                TextFormField(
+                  controller: _propServicoController,
+                  decoration: const InputDecoration(
+                    labelText: 'Diagnóstico Técnico / Serviço Proposto',
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Ex: Troca de tela frontal e conector de carga...',
+                  ),
+                  validator: (v) => v == null || v.isEmpty ? 'Informe o diagnóstico/serviço proposto' : null,
+                ),
+                const SizedBox(height: 14),
+
+                // Valor Proposto
+                TextFormField(
+                  controller: _propValorController,
+                  decoration: const InputDecoration(
+                    labelText: 'Valor do Orçamento (R\$)',
+                    prefixIcon: Icon(Icons.sell),
+                    hintText: '0,00',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Informe o valor proposto';
+                    final parse = double.tryParse(v.replaceAll(',', '.'));
+                    if (parse == null || parse < 0) return 'Valor inválido';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _handleRecusar,
+                        icon: const Icon(Icons.cancel_outlined, size: 20),
+                        label: const Text(
+                          'Recusar',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _handleAprovar,
+                        icon: const Icon(Icons.play_circle_outline, size: 20),
+                        label: const Text(
+                          'Aprovar e Iniciar',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF27AE60),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Default or Em Manutenção
     return Card(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -771,10 +1011,10 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.monetization_on_outlined, color: Color(0xFF2ECC71)),
+                  Icon(Icons.build_circle_outlined, color: Color(0xFF2980B9)),
                   SizedBox(width: 8),
                   Text(
-                    'Finalização e Faturamento',
+                    'Finalização e Faturamento de Conserto',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
                   ),
                 ],
@@ -797,7 +1037,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
               TextFormField(
                 controller: _valorController,
                 decoration: const InputDecoration(
-                  labelText: 'Valor Cobrado (R\$)',
+                  labelText: 'Valor Final Cobrado (R\$)',
                   prefixIcon: Icon(Icons.payments),
                   hintText: '0,00',
                 ),
@@ -809,7 +1049,7 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Botão Finalizar
               SizedBox(
@@ -819,11 +1059,11 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
                   onPressed: _finalizarServico,
                   icon: const Icon(Icons.check_circle_outline, size: 20),
                   label: const Text(
-                    'Finalizar e Emitir Cobrança',
+                    'Concluir Reparo (Disponibilizar para Retirada)',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF27AE60),
+                    backgroundColor: const Color(0xFF2980B9),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
