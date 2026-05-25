@@ -23,6 +23,10 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
   String _armazenamento = '128GB';
   final _senhaController = TextEditingController();
   final _problemaController = TextEditingController();
+
+  // Novos controladores para detalhamento da OS direta
+  final _servicoPrevistoController = TextEditingController();
+  final _valorPrevistoController = TextEditingController();
   
   bool _displayOk = true;
   bool _touchOk = true;
@@ -50,6 +54,8 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
     _corController.dispose();
     _senhaController.dispose();
     _problemaController.dispose();
+    _servicoPrevistoController.dispose();
+    _valorPrevistoController.dispose();
     super.dispose();
   }
 
@@ -187,6 +193,8 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
         checkTouch: drift.Value(_touchOk),
         problemaRelatado: drift.Value(problemaCompleto),
         status: drift.Value(_tipoRegistro == 'OS' ? 'Em Manutenção' : 'Pendente'),
+        servicoExecutado: _tipoRegistro == 'OS' ? drift.Value(_servicoPrevistoController.text.trim()) : const drift.Value.absent(),
+        valor: _tipoRegistro == 'OS' ? drift.Value(double.tryParse(_valorPrevistoController.text.replaceAll(',', '.')) ?? 0.0) : const drift.Value.absent(),
       );
 
       try {
@@ -245,6 +253,12 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
                 // Ficha Técnica do Aparelho (Marca, Cor, Senha, CPF do Cliente)
                 _buildTechnicalSpecsSection(),
                 const SizedBox(height: 16),
+
+                // Detalhamento de Serviço contratado direto (Apenas para OS)
+                if (_tipoRegistro == 'OS') ...[
+                  _buildDetalhamentoServicoCard(),
+                  const SizedBox(height: 16),
+                ],
 
                 // Checklist de Entrada Físico e Acessórios
                 _buildChecklistSection(),
@@ -454,6 +468,72 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
             child: const Text('Puxar Dados', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDetalhamentoServicoCard() {
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.assignment_turned_in, color: Color(0xFF1565C0)),
+                SizedBox(width: 8),
+                Text(
+                  'Detalhamento do Serviço (OS)',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Informe as peças a serem trocadas e o valor pré-acordado com o cliente',
+              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 14),
+
+            TextFormField(
+              controller: _servicoPrevistoController,
+              decoration: const InputDecoration(
+                labelText: 'Peças a serem Trocadas / Serviço Contratado',
+                prefixIcon: Icon(Icons.build_circle_outlined),
+                hintText: 'Ex: Troca de bateria e conector de carga...',
+              ),
+              validator: (v) {
+                if (_tipoRegistro == 'OS' && (v == null || v.isEmpty)) {
+                  return 'Informe o serviço a ser realizado na OS';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+
+            TextFormField(
+              controller: _valorPrevistoController,
+              decoration: const InputDecoration(
+                labelText: 'Valor Pré-Acordado (R\$)',
+                prefixIcon: Icon(Icons.payments_outlined),
+                hintText: '0,00',
+              ),
+              keyboardType: TextInputType.number,
+              validator: (v) {
+                if (_tipoRegistro == 'OS') {
+                  if (v == null || v.isEmpty) return 'Informe o valor do serviço';
+                  final parse = double.tryParse(v.replaceAll(',', '.'));
+                  if (parse == null || parse < 0) return 'Valor inválido';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
