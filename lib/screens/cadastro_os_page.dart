@@ -545,10 +545,25 @@ class _CadastroOsPageState extends State<CadastroOsPage> {
                   flex: 4,
                   child: TextFormField(
                     controller: _senhaController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Senha Desbloqueio',
-                      prefixIcon: Icon(Icons.password),
+                      prefixIcon: const Icon(Icons.password),
                       hintText: 'Senha ou padrão',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.gesture, color: Color(0xFF1565C0)),
+                        onPressed: () async {
+                          final String? pattern = await showDialog<String>(
+                            context: context,
+                            builder: (context) => const PatternLockDialog(),
+                          );
+                          if (pattern != null) {
+                            setState(() {
+                              _senhaController.text = pattern;
+                            });
+                          }
+                        },
+                        tooltip: 'Desenhar padrão',
+                      ),
                     ),
                     validator: (v) => v == null || v.isEmpty ? 'Recomendável registrar a senha' : null,
                   ),
@@ -1024,5 +1039,196 @@ class _SelectorClienteSheetState extends State<_SelectorClienteSheet> {
         ],
       ),
     );
+  }
+}
+
+class PatternLockDialog extends StatefulWidget {
+  const PatternLockDialog({super.key});
+
+  @override
+  State<PatternLockDialog> createState() => _PatternLockDialogState();
+}
+
+class _PatternLockDialogState extends State<PatternLockDialog> {
+  final List<int> _selectedPoints = [];
+  Offset? _currentTouchPosition;
+
+  Offset _getOffset(int index, Size size) {
+    double stepX = size.width / 4;
+    double stepY = size.height / 4;
+    int row = index ~/ 3;
+    int col = index % 3;
+    return Offset(stepX * (col + 1), stepY * (row + 1));
+  }
+
+  void _onPanUpdate(DragUpdateDetails details, Size size) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset localPos = box.globalToLocal(details.globalPosition);
+    setState(() {
+      _currentTouchPosition = localPos;
+    });
+
+    for (int i = 0; i < 9; i++) {
+      final Offset pointPos = _getOffset(i, size);
+      final double distance = (localPos - pointPos).distance;
+      if (distance < 24.0) { // Raio de tolerância de 24 pixels
+        if (!_selectedPoints.contains(i)) {
+          setState(() {
+            _selectedPoints.add(i);
+          });
+        }
+      }
+    }
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    setState(() {
+      _currentTouchPosition = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.gesture, color: Color(0xFF1565C0)),
+          SizedBox(width: 8),
+          Text('Desenhar Padrão'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Arraste o dedo conectando os pontos para definir a senha do celular do cliente.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 240,
+            height: 240,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: GestureDetector(
+              onPanUpdate: (d) {
+                final RenderBox box = context.findRenderObject() as RenderBox;
+                _onPanUpdate(d, box.size);
+              },
+              onPanEnd: _onPanEnd,
+              child: CustomPaint(
+                painter: _PatternCapturePainter(
+                  points: _selectedPoints,
+                  currentPos: _currentTouchPosition,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedPoints.clear();
+                    _currentTouchPosition = null;
+                  });
+                },
+                child: const Text('Limpar', style: TextStyle(color: Colors.redAccent)),
+              ),
+              Text(
+                'Seq: ${_selectedPoints.join(' → ')}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+              ),
+            ],
+          )
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: _selectedPoints.isEmpty
+              ? null
+              : () => Navigator.pop(context, _selectedPoints.join(',')),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1565C0),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Confirmar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PatternCapturePainter extends CustomPainter {
+  final List<int> points;
+  final Offset? currentPos;
+
+  _PatternCapturePainter({required this.points, required this.currentPos});
+
+  Offset _getOffset(int index, Size size) {
+    double stepX = size.width / 4;
+    double stepY = size.height / 4;
+    int row = index ~/ 3;
+    int col = index % 3;
+    return Offset(stepX * (col + 1), stepY * (row + 1));
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Desenha conexões
+    final linePaint = Paint()
+      ..color = const Color(0xFF1565C0)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6.0
+      ..strokeCap = StrokeCap.round;
+
+    if (points.length > 1) {
+      Path path = Path();
+      Offset start = _getOffset(points.first, size);
+      path.moveTo(start.dx, start.dy);
+
+      for (int i = 1; i < points.length; i++) {
+        Offset next = _getOffset(points[i], size);
+        path.lineTo(next.dx, next.dy);
+      }
+      canvas.drawPath(path, linePaint);
+    }
+
+    // Linha temporária
+    if (points.isNotEmpty && currentPos != null) {
+      Offset lastPoint = _getOffset(points.last, size);
+      canvas.drawLine(lastPoint, currentPos!, linePaint..color = const Color(0xFF1565C0).withValues(alpha: 0.5));
+    }
+
+    // 2. Desenha nós
+    final dotPaint = Paint()
+      ..color = Colors.grey[400]!
+      ..style = PaintingStyle.fill;
+
+    final activeDotPaint = Paint()
+      ..color = const Color(0xFF1565C0)
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 9; i++) {
+      Offset pos = _getOffset(i, size);
+      bool isActive = points.contains(i);
+      
+      canvas.drawCircle(pos, isActive ? 8.0 : 6.0, isActive ? activeDotPaint : dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PatternCapturePainter oldDelegate) {
+    return oldDelegate.points != points || oldDelegate.currentPos != currentPos;
   }
 }

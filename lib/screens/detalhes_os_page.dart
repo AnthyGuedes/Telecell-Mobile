@@ -300,6 +300,12 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
     return false;
   }
 
+  bool _isPatternPassword(String password) {
+    if (password.isEmpty) return false;
+    final regExp = RegExp(r'^[0-8](\s*,\s*[0-8])*$');
+    return regExp.hasMatch(password);
+  }
+
   String _limparProblemaTexto(String text) {
     final idx = text.indexOf('\n\n[Acessórios:');
     if (idx != -1) {
@@ -609,6 +615,31 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
               _item!.ordem.senhaDesbloqueio.isNotEmpty ? _item!.ordem.senhaDesbloqueio : 'Não informada',
               isPass: true,
             ),
+            if (_isPatternPassword(_item!.ordem.senhaDesbloqueio)) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    flex: 2,
+                    child: Text(
+                      'Padrão Visual:',
+                      style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: PatternPreviewWidget(
+                        patternString: _item!.ordem.senhaDesbloqueio,
+                        size: 110,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             _buildDetailRow(
               'Data de Entrada:',
@@ -1165,5 +1196,106 @@ class _DetalhesOsPageState extends State<DetalhesOsPage> {
         ),
       ),
     );
+  }
+}
+
+class PatternPreviewWidget extends StatelessWidget {
+  final String patternString;
+  final double size;
+
+  const PatternPreviewWidget({
+    super.key,
+    required this.patternString,
+    this.size = 120.0,
+  });
+
+  List<int> _parsePattern() {
+    if (patternString.isEmpty) return [];
+    return patternString
+        .split(',')
+        .map((e) => int.tryParse(e.trim()))
+        .where((e) => e != null && e >= 0 && e < 9)
+        .cast<int>()
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final points = _parsePattern();
+
+    if (points.isEmpty) {
+      return const Text(
+        'Nenhum padrão cadastrado',
+        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+      ),
+      child: CustomPaint(
+        painter: _PatternPainter(points: points),
+      ),
+    );
+  }
+}
+
+class _PatternPainter extends CustomPainter {
+  final List<int> points;
+
+  _PatternPainter({required this.points});
+
+  Offset _getOffset(int index, Size size) {
+    double stepX = size.width / 4;
+    double stepY = size.height / 4;
+    int row = index ~/ 3;
+    int col = index % 3;
+    return Offset(stepX * (col + 1), stepY * (row + 1));
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = const Color(0xFF1565C0)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.round;
+
+    if (points.length > 1) {
+      Path path = Path();
+      Offset start = _getOffset(points.first, size);
+      path.moveTo(start.dx, start.dy);
+
+      for (int i = 1; i < points.length; i++) {
+        Offset next = _getOffset(points[i], size);
+        path.lineTo(next.dx, next.dy);
+      }
+      canvas.drawPath(path, linePaint);
+    }
+
+    final dotPaint = Paint()
+      ..color = Colors.grey[300]!
+      ..style = PaintingStyle.fill;
+
+    final activeDotPaint = Paint()
+      ..color = const Color(0xFF1565C0)
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < 9; i++) {
+      Offset pos = _getOffset(i, size);
+      bool isActive = points.contains(i);
+      
+      canvas.drawCircle(pos, isActive ? 6.0 : 4.0, isActive ? activeDotPaint : dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PatternPainter oldDelegate) {
+    return oldDelegate.points != points;
   }
 }
