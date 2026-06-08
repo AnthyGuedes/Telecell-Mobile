@@ -150,6 +150,34 @@ class AppDatabase extends _$AppDatabase {
             ..where((t) => t.clienteId.equals(clienteId))
             ..orderBy([(t) => OrderingTerm.desc(t.dataEntrada)]))
           .get();
+
+  // ---------------------------------------------------------------------------
+  // INTELIGÊNCIA DE ESTOQUE — AGRUPAMENTO
+  // ---------------------------------------------------------------------------
+
+  /// Agrupa as OS por modelo e conta as ocorrências de cada um, ordenado decrescentemente.
+  Future<List<ModeloVolume>> obterVolumePorModelo() async {
+    final countExpr = ordensServico.id.count();
+    final query = selectOnly(ordensServico)
+      ..addColumns([ordensServico.marcaModelo, countExpr])
+      ..groupBy([ordensServico.marcaModelo])
+      ..orderBy([OrderingTerm.desc(countExpr)]);
+
+    final rows = await query.get();
+    return rows.map((row) {
+      return ModeloVolume(
+        marcaModelo: row.read(ordensServico.marcaModelo) ?? 'Desconhecido',
+        volume: row.read(countExpr) ?? 0,
+      );
+    }).toList();
+  }
+}
+
+class ModeloVolume {
+  final String marcaModelo;
+  final int volume;
+
+  ModeloVolume({required this.marcaModelo, required this.volume});
 }
 
 // =============================================================================

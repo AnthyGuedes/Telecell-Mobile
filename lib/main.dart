@@ -4,6 +4,7 @@ import 'screens/dashboard_page.dart';
 import 'screens/lista_ordens_page.dart';
 import 'screens/cadastro_os_page.dart';
 import 'screens/detalhes_os_page.dart';
+import 'screens/inteligencia_estoque_page.dart';
 
 void main() {
   runApp(const GestorOsApp());
@@ -72,6 +73,7 @@ class GestorOsApp extends StatelessWidget {
         '/lista-ordens': (context) => const ListaOrdensPage(),
         '/cadastro-os': (context) => const CadastroOsPage(),
         '/detalhes-os': (context) => const DetalhesOsPage(),
+        '/inteligencia-estoque': (context) => const InteligenciaEstoquePage(),
       },
     );
   }

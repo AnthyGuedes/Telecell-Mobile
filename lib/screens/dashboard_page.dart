@@ -429,6 +429,16 @@ class _DashboardPageState extends State<DashboardPage> {
             _carregarDados();
           },
         ),
+        _buildActionButton(
+          'Inteligência Estoque',
+          'Análise de Demanda',
+          Icons.analytics_outlined,
+          const Color(0xFFE67E22),
+          () async {
+            await Navigator.pushNamed(context, '/inteligencia-estoque');
+            _carregarDados();
+          },
+        ),
       ],
     );
   }
