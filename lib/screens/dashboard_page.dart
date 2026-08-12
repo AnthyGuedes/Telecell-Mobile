@@ -439,6 +439,15 @@ class _DashboardPageState extends State<DashboardPage> {
             _carregarDados();
           },
         ),
+        _buildActionButton(
+          'Analista de Dados',
+          'IA Offline',
+          Icons.insights_rounded,
+          const Color(0xFF6A1B9A),
+          () async {
+            await Navigator.pushNamed(context, '/analista-ia');
+          },
+        ),
       ],
     );
   }

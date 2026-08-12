@@ -10,6 +10,14 @@ O **Telecell Mobile** é um aplicativo mobile de alta performance desenvolvido e
 
 ---
 
+## 📸 Demonstração Visual & Telas
+
+| Dashboard & Métricas | Inteligência de Estoque (Curva ABC) |
+| :---: | :---: |
+| ![Dashboard Telecell Mobile](flutter_01.png) | ![Estoque Telecell Mobile](flutter_02.png) |
+
+---
+
 ## 🎯 Principais Funcionalidades
 
 ### 1. 📊 Dashboard Estratégico (Visão Geral)
@@ -29,6 +37,13 @@ O **Telecell Mobile** é um aplicativo mobile de alta performance desenvolvido e
 * **Cadastro Integrado:** Vinculação automática ou cadastro rápido de clientes no momento da abertura da OS.
 * **Histórico por Cliente:** Acompanhamento de todos os dispositivos deixados para manutenção por um determinado cliente.
 
+### 4. 🧠 Módulo de Inteligência de Estoque (Análise Curva ABC)
+* **Classificação Automática de Peças:** Algoritmo que analisa o histórico de entradas e categoriza os modelos de smartphones em três classes estratégicas:
+  * 🟠 **Classe A (Alta Rotatividade):** Modelos mais frequentes. Recomendação de compras em lote (telas, baterias, conectores) com desconto de atacado e estoque de segurança.
+  * 🔵 **Classe B (Média Rotatividade):** Demanda moderada. Recomendação de reposição semanal com estoque mínimo controlado (1 a 2 unidades).
+  * 🔘 **Classe C (Baixa Rotatividade):** Aparelhos raros/antigos. Recomendação de compras *Just-in-Time* (aquisição sob demanda após aprovação do orçamento).
+* **Visualização Gráfica:** Gráfico de barras dinâmico e interativo impulsionado pelo pacote `fl_chart`.
+
 ---
 
 ## 🛠️ Arquitetura & Tecnologias
@@ -45,7 +60,6 @@ O projeto utiliza arquitetura limpa e padrão de projeto reativo *offline-first*
 | **Gerenciamento de Estado** | StatefulWidgets + Reactive Queries | Atualização de UI sincronizada com as operações do banco. |
 
 ---
-
 
 ## 📂 Estrutura de Diretórios
 
@@ -189,4 +203,3 @@ erDiagram
 <p center="align">
   Desevolvido por <b>Anthy Guedes</b> 🚀
 </p>
-
