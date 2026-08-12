@@ -29,13 +29,6 @@ O **Telecell Mobile** é um aplicativo mobile de alta performance desenvolvido e
 * **Cadastro Integrado:** Vinculação automática ou cadastro rápido de clientes no momento da abertura da OS.
 * **Histórico por Cliente:** Acompanhamento de todos os dispositivos deixados para manutenção por um determinado cliente.
 
-### 4. 🧠 Módulo de Inteligência de Estoque (Análise Curva ABC)
-* **Classificação Automática de Peças:** Algoritmo que analisa o histórico de entradas e categoriza os modelos de smartphones em três classes estratégicas:
-  * 🟠 **Classe A (Alta Rotatividade):** Modelos mais frequentes. Recomendação de compras em lote (telas, baterias, conectores) com desconto de atacado e estoque de segurança.
-  * 🔵 **Classe B (Média Rotatividade):** Demanda moderada. Recomendação de reposição semanal com estoque mínimo controlado (1 a 2 unidades).
-  * 🔘 **Classe C (Baixa Rotatividade):** Aparelhos raros/antigos. Recomendação de compras *Just-in-Time* (aquisição sob demanda após aprovação do orçamento).
-* **Visualização Gráfica:** Gráfico de barras dinâmico e interativo impulsionado pelo pacote `fl_chart`.
-
 ---
 
 ## 🛠️ Arquitetura & Tecnologias
@@ -52,6 +45,7 @@ O projeto utiliza arquitetura limpa e padrão de projeto reativo *offline-first*
 | **Gerenciamento de Estado** | StatefulWidgets + Reactive Queries | Atualização de UI sincronizada com as operações do banco. |
 
 ---
+
 
 ## 📂 Estrutura de Diretórios
 
@@ -77,35 +71,79 @@ Telecell-Mobile/
 
 ---
 
-## 🗄️ Modelo de Dados (Schema BD)
+## 🗄️ Arquitetura & Modelo de Dados do Banco (Drift / SQLite)
+
+> 📘 **Documentação Dedicada:** Para uma análise técnica aprofundada dos arquivos da camada de persistência, consulte o documento [`lib/database/README.md`](lib/database/README.md).
+
+O banco de dados relacional foi construído com **Drift ORM** sobre engine **SQLite** nativo. O acesso aos dados segue o padrão **Singleton** (`AppDatabase`) com inicialização assíncrona (`LazyDatabase`) no diretório seguro da aplicação.
+
+### 📋 Dicionário de Tabelas
+
+#### 1. Tabela `Clientes`
+| Coluna | Tipo | Restrições | Descrição |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | `PRIMARY KEY AUTOINCREMENT` | Identificador único do cliente |
+| `nome` | `TEXT` | `NOT NULL` | Nome completo do cliente |
+| `telefone` | `TEXT` | `NOT NULL` | Telefone de contato / WhatsApp |
+| `cpf` | `TEXT` | `NOT NULL` | CPF do cliente |
+
+#### 2. Tabela `OrdensServico` (`OrdemDeServico`)
+| Coluna | Tipo | Restrições | Descrição |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | `PRIMARY KEY AUTOINCREMENT` | Número identificador da OS / Orçamento |
+| `clienteId` | `INTEGER` | `FOREIGN KEY -> Clientes(id)` | Vínculo com o cliente cadastrado |
+| `tipoRegistro` | `TEXT` | `NOT NULL` | Classificação: `"OS"` ou `"Orçamento"` |
+| `dataEntrada` | `DATETIME` | `NOT NULL` | Data/Hora de abertura |
+| `marcaModelo` | `TEXT` | `NOT NULL` | Modelo do aparelho (ex: *"iPhone 13"*) |
+| `imei` | `TEXT` | `NOT NULL` | Código IMEI / Serial do dispositivo |
+| `senhaDesbloqueio` | `TEXT` | `NOT NULL` | Senha de acesso para realização de testes |
+| `checkDisplay` | `BOOLEAN` | `DEFAULT FALSE` | Checklist: Tela e imagem operacionais |
+| `checkTouch` | `BOOLEAN` | `DEFAULT FALSE` | Checklist: Touchscreen responsivo |
+| `problemaRelatado` | `TEXT` | `NOT NULL` | Descrição do problema fornecida pelo cliente |
+| `servicoExecutado` | `TEXT` | `NULLABLE` | Descrição técnica do reparo efetuado |
+| `valor` | `REAL` | `NULLABLE` | Valor cobrado pelo serviço (R$) |
+| `status` | `TEXT` | `DEFAULT 'Aberta'` | Etapa atual do atendimento |
+
+---
+
+### 📐 Diagrama Entidade-Relacionamento (ERD)
 
 ```mermaid
 erDiagram
-    CLIENTES ||--o{ ORDENS_SERVICO : possui
+    CLIENTES ||--o{ ORDENS_SERVICO : "1 : N (possui)"
     CLIENTES {
-        int id PK
-        string nome
-        string telefone
-        string cpf
+        int id PK "Auto Increment"
+        string nome "NotNull"
+        string telefone "NotNull"
+        string cpf "NotNull"
     }
     ORDENS_SERVICO {
-        int id PK
-        int clienteId FK
+        int id PK "Auto Increment"
+        int clienteId FK "Ref: Clientes(id)"
         string tipoRegistro "OS | Orçamento"
-        datetime dataEntrada
-        string marcaModelo
-        string imei
-        string senhaDesbloqueio
-        boolean checkDisplay
-        boolean checkTouch
-        string problemaRelatado
-        string servicoExecutado
-        real valor
-        string status "Pendente | Em Manutenção | Aguardando Retirada | Concluído"
+        datetime dataEntrada "Data de Abertura"
+        string marcaModelo "Aparelho"
+        string imei "Identificador"
+        string senhaDesbloqueio "Acesso a testes"
+        boolean checkDisplay "Checklist Display"
+        boolean checkTouch "Checklist Touch"
+        string problemaRelatado "Sintoma"
+        string servicoExecutado "Procedimento"
+        real valor "Valor final R$"
+        string status "Estado do serviço"
     }
 ```
 
 ---
+
+### ⚡ Queries & Funcionalidades da Camada de Dados
+
+- **Junções de Tabelas (Inner Join):** Método `listarOrdensComCliente()` realiza a junção de `OrdensServico` com `Clientes` e remapeia os resultados em objetos compostos `OrdemComCliente`.
+- **Filtro Dinâmico:** Método `buscarOrdens()` efetua buscas combinadas e case-insensitive via cláusulas `LIKE` e verificações de `status`.
+- **Agrupamento de BI (Curva ABC):** Método `obterVolumePorModelo()` executa consulta customizada (`selectOnly`) com `groupBy([marcaModelo])` e agregação `count()`, ordenando os modelos de maior fluxo para alimentar o gráfico de inteligência de estoque.
+
+---
+
 
 ## 🚀 Como Executar o Projeto
 
@@ -151,3 +189,4 @@ erDiagram
 <p center="align">
   Desevolvido por <b>Anthy Guedes</b> 🚀
 </p>
+
