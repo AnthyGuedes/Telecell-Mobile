@@ -10,14 +10,6 @@ O **Telecell Mobile** é um aplicativo mobile de alta performance desenvolvido e
 
 ---
 
-## 📸 Demonstração Visual & Telas
-
-| Dashboard & Métricas | Inteligência de Estoque (Curva ABC) |
-| :---: | :---: |
-| ![Dashboard Telecell Mobile](flutter_01.png) | ![Estoque Telecell Mobile](flutter_02.png) |
-
----
-
 ## 🎯 Principais Funcionalidades
 
 ### 1. 📊 Dashboard Estratégico (Visão Geral)
